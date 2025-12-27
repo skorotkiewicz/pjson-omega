@@ -20,16 +20,19 @@ const B =
  * 80: reference (r)
  * 81: key definition (m)
  * 82: key reference (k)
+ * 83: date (d)
+ * 84: structural reference (R)
  */
 
-const numEnc = (v: number): string => {
-  if (v >= 0 && v <= 50) return B[v];
+const numEnc = (v: number | bigint): string => {
+  if (typeof v === "number" && v >= 0 && v <= 50) return B[v];
   const neg = v < 0;
-  let abs = Math.floor(Math.abs(v));
+  let abs = v < 0n ? -BigInt(v) : BigInt(v);
   let r = "";
-  while (abs > 0) {
-    r = B[abs % 91] + r;
-    abs = Math.floor(abs / 91);
+  if (abs === 0n) return B[0];
+  while (abs > 0n) {
+    r = B[Number(abs % BigInt(91))] + r;
+    abs = abs / BigInt(91);
   }
   return `${neg ? "~" : "_"}${r}z`;
 };
@@ -48,7 +51,10 @@ export const encode = (v: unknown): string => {
       if (Number.isInteger(num)) {
         return num >= 0 && num <= 50 ? B[num] : `${B[74]}${numEnc(num)}`;
       }
-      return `${B[75]}${num}z`;
+      // Float bit-packing (pure bit-stream to alphabet)
+      const buffer = new BigUint64Array([0n]);
+      new Float64Array(buffer.buffer)[0] = num;
+      return `${B[75]}${numEnc(buffer[0])}`;
     }
     if (t === "string") {
       const s = x as string;
@@ -59,13 +65,22 @@ export const encode = (v: unknown): string => {
       }
       return `${B[76]}${numEnc(s.length)}${s}`;
     }
+    if (x instanceof Date) return `${B[83]}${numEnc(x.getTime())}`;
+
+    // Complex Structural Reference check
+    if (r !== undefined && (t === "object" || Array.isArray(x))) {
+      return `${B[84]}${numEnc(r)}`;
+    }
+
     if (Array.isArray(x)) {
+      if (nId < 4096) d.set(x, nId++);
       let out =
         x.length < 10 ? B[51 + x.length] : `${B[78]}${numEnc(x.length)}`;
       for (const item of x) out += e(item);
       return out;
     }
     if (t === "object") {
+      if (nId < 4096) d.set(x, nId++);
       const obj = x as Record<string, unknown>;
       const keys = Object.keys(obj);
       let out =
@@ -89,23 +104,25 @@ export const encode = (v: unknown): string => {
 };
 
 export const decode = (s: string): unknown => {
-  const d = new Map<number, string>();
+  const d = new Map<number, unknown>();
   let p = 0;
   let nId = 0;
 
-  const readNum = (): number => {
-    if (p >= s.length) return 0;
+  const readBig = (): bigint => {
+    if (p >= s.length) return 0n;
     const first = s[p++];
-    const fIdx = B.indexOf(first);
+    const fIdx = BigInt(B.indexOf(first));
     if (first !== "_" && first !== "~") return fIdx;
     const neg = first === "~";
-    let r = 0;
+    let r = 0n;
     while (p < s.length && s[p] !== "z") {
-      r = r * 91 + B.indexOf(s[p++]);
+      r = r * 91n + BigInt(B.indexOf(s[p++]));
     }
     if (s[p] === "z") p++;
     return neg ? -r : r;
   };
+
+  const readNum = (): number => Number(readBig());
 
   const f = (): unknown => {
     if (p >= s.length) return undefined;
@@ -118,10 +135,9 @@ export const decode = (s: string): unknown => {
     if (tIdx === 73) return false;
     if (tIdx === 74) return readNum();
     if (tIdx === 75) {
-      let v = "";
-      while (p < s.length && s[p] !== "z") v += s[p++];
-      if (s[p] === "z") p++;
-      return parseFloat(v);
+      const bits = readBig();
+      const buffer = new BigUint64Array([bits]);
+      return new Float64Array(buffer.buffer)[0];
     }
     if (tIdx === 76 || tIdx === 77) {
       const len = readNum();
@@ -130,11 +146,14 @@ export const decode = (s: string): unknown => {
       if (tIdx === 77 && r.length === len) d.set(nId++, r);
       return r;
     }
-    if (tIdx === 80) return d.get(readNum());
+    if (tIdx === 80 || tIdx === 84) return d.get(readNum());
+    if (tIdx === 83) return new Date(readNum());
 
     if (tIdx === 78 || (tIdx >= 51 && tIdx <= 60)) {
       const len = tIdx >= 51 && tIdx <= 60 ? tIdx - 51 : readNum();
       const a: unknown[] = [];
+      const id = nId++;
+      d.set(id, a);
       for (let i = 0; i < len; i++) {
         if (p >= s.length) break;
         const val = f();
@@ -146,6 +165,8 @@ export const decode = (s: string): unknown => {
     if (tIdx === 79 || (tIdx >= 61 && tIdx <= 70)) {
       const len = tIdx >= 61 && tIdx <= 70 ? tIdx - 61 : readNum();
       const o: Record<string, unknown> = {};
+      const id = nId++;
+      d.set(id, o);
       for (let i = 0; i < len; i++) {
         if (p >= s.length) break;
         const mt = s[p++];
@@ -157,7 +178,7 @@ export const decode = (s: string): unknown => {
           p += kl;
           if (key.length === kl) d.set(nId++, key);
         } else if (mtIdx === 82) {
-          key = d.get(readNum());
+          key = d.get(readNum()) as string;
         }
         const val = f();
         if (key !== undefined) o[key] = val;

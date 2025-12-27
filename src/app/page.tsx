@@ -134,6 +134,21 @@ export default function Home() {
     }
   };
 
+  const safeStringify = (obj: any) => {
+    const cache = new Set();
+    return JSON.stringify(
+      obj,
+      (key, value) => {
+        if (typeof value === "object" && value !== null) {
+          if (cache.has(value)) return "[Circular Reference]";
+          cache.add(value);
+        }
+        return value;
+      },
+      2,
+    );
+  };
+
   return (
     <main className="h-screen bg-[#050505] text-zinc-400 font-mono selection:bg-emerald-500/30 flex flex-col overflow-hidden">
       {/* HEADER SECTION - FIXED HEIGHT */}
@@ -281,7 +296,7 @@ export default function Home() {
                 className="text-emerald-500/80 text-[11px] leading-snug mt-4"
               >
                 {streamData ? (
-                  JSON.stringify(streamData, null, 2)
+                  safeStringify(streamData)
                 ) : (
                   <span className="text-zinc-900 italic">Waiting...</span>
                 )}
