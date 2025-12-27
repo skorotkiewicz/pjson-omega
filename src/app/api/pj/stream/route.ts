@@ -5,15 +5,15 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   const data = {
     status: "streaming",
-    timestamp: Date.now(),
+    timestamp: 1700000000000,
     sequence: Array.from({ length: 50 }, (_, i) => ({
       id: i + 1,
       user: `Node_${(i + 1).toString().padStart(3, "0")}`,
-      status: ["ACTIVE", "STANDBY", "RECOVERING"][i % 3],
-      load: Math.floor(Math.random() * 100),
+      status: "ACTIVE",
+      load: 10 + (i % 40),
       metrics: {
-        cpu: (Math.random() * 100).toFixed(1),
-        temp: (30 + Math.random() * 40).toFixed(1),
+        cpu: (10 + (i % 20)).toFixed(1),
+        temp: (35 + (i % 5)).toFixed(1),
       },
       tags: ["PROD", "NODE", "PJSON"].slice(0, (i % 3) + 1),
     })),

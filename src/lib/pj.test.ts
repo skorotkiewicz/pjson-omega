@@ -174,7 +174,7 @@ describe("PJ Protocol", () => {
           id: i,
           uid: `user-${i}`,
           active: i % 2 === 0,
-          meta: { hash: Math.random().toString(36) },
+          meta: { hash: `hash-${i}` },
         })),
         footer: "End of transmission",
       };

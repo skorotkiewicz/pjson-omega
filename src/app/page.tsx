@@ -217,88 +217,69 @@ export default function Home() {
           </div>
 
           {(isStreaming || !!streamData) && (
-            <div className="bg-[#080808] rounded-[2rem] border border-zinc-900 p-8 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 shadow-xl">
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                {Array.from({ length: 50 }).map((_, i) => {
-                  const item = streamData?.sequence?.[i];
-                  return (
-                    <div
-                      key={i}
-                      className={`group p-4 rounded-2xl border transition-all duration-700 flex flex-col justify-between h-24 ${
-                        item
-                          ? "bg-zinc-900/50 border-emerald-500/20 scale-100"
-                          : "bg-black border-zinc-900 scale-95 opacity-50"
-                      }`}
-                    >
-                      <div className="flex justify-between items-start">
-                        <span
-                          className={`text-[8px] font-mono font-black ${item ? "text-emerald-500/50" : "text-zinc-800"}`}
-                        >
-                          [{(i + 1).toString().padStart(3, "0")}]
-                        </span>
-                        {item && (
-                          <div
-                            className={`w-1 h-1 rounded-full ${item.status === "ACTIVE" ? "bg-emerald-500" : item.status === "STANDBY" ? "bg-amber-500" : "bg-red-500"} animate-pulse`}
-                          />
-                        )}
-                      </div>
-
-                      {item ? (
-                        <div className="space-y-1 animate-in fade-in zoom-in-95 duration-500">
-                          <div className="text-[9px] font-black text-zinc-300 truncate tracking-tight">
-                            {item.user || "Initializing..."}
-                          </div>
-                          <div className="h-0.5 bg-zinc-800 rounded-full overflow-hidden">
-                            <div
-                              className="h-full bg-emerald-500 transition-all duration-1000"
-                              style={{ width: `${item.load ?? 0}%` }}
-                            />
-                          </div>
-                          <div className="flex justify-between text-[7px] font-mono text-zinc-500">
-                            <span className="text-zinc-400">
-                              CPU {item.metrics?.cpu ?? "0"}%
-                            </span>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="flex-1 flex items-center justify-center">
-                          <div className="w-1/2 h-0.5 bg-zinc-900 rounded-full overflow-hidden">
-                            <div
-                              className={`h-full bg-zinc-800 animate-loading-bar ${isStreaming ? "opacity-1" : "opacity-0"}`}
-                            />
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 pt-8 border-t border-zinc-900">
-                <div className="bg-black rounded-2xl p-6 border border-zinc-900/50 h-48 overflow-auto scrollbar-hide">
-                  <span className="text-[10px] font-bold text-zinc-700 uppercase italic mb-4 block">
+            <div className="bg-[#080808] rounded-[2rem] border border-zinc-900 p-8 space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-500 shadow-xl">
+              {/* PRIMARY FOCUS: HYDRATION & LOGS */}
+              <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+                <div className="lg:col-span-3 bg-black rounded-[2rem] p-8 border border-zinc-900/50 h-[500px] overflow-auto scrollbar-hide">
+                  <div className="flex justify-between items-center mb-6">
+                    <span className="text-[11px] font-bold text-zinc-600 uppercase tracking-widest italic">
+                      Structure_Hydration_Matrix
+                    </span>
+                    <span className="text-[10px] font-mono text-emerald-500/30">
+                      RE_HYDRATING_BYTES...
+                    </span>
+                  </div>
+                  <pre className="text-emerald-500/90 font-mono text-xs leading-relaxed">
+                    {streamData
+                      ? JSON.stringify(streamData, null, 2)
+                      : "// WAITING_FOR_OMEGA_TRANSMISSION..."}
+                  </pre>
+                </div>
+                <div className="bg-black rounded-[2rem] p-8 border border-zinc-900/50 h-[500px] overflow-auto scrollbar-hide">
+                  <span className="text-[11px] font-bold text-zinc-600 uppercase tracking-widest italic mb-6 block">
                     Diagnostics
                   </span>
-                  <div className="space-y-1">
+                  <div className="space-y-2">
                     {logs.map((log, i) => (
                       <div
                         key={i}
-                        className="text-[9px] font-mono text-emerald-500/40"
+                        className="text-[10px] font-mono text-zinc-500 leading-tight border-l border-zinc-900 pl-3"
                       >
                         {log}
                       </div>
                     ))}
                   </div>
                 </div>
-                <div className="lg:col-span-2 bg-black rounded-2xl p-6 border border-zinc-900/50 h-48 overflow-auto scrollbar-hide">
-                  <span className="text-[10px] font-bold text-zinc-700 uppercase italic mb-4 block">
-                    Structure_Hydration
+              </div>
+
+              {/* SUPPORTING FOCUS: VISUAL PACKAGES */}
+              <div className="space-y-6 pt-12 border-t border-zinc-900/50">
+                <div className="flex justify-between items-center">
+                  <span className="text-[10px] font-bold text-zinc-700 uppercase tracking-widest">
+                    Visual_Package_Matrix
                   </span>
-                  <pre className="text-zinc-500 font-mono text-[10px] leading-tight">
-                    {streamData
-                      ? JSON.stringify(streamData, null, 2)
-                      : "// Waiting..."}
-                  </pre>
+                  <span className="text-[9px] font-mono text-zinc-800">
+                    TOTAL_NODES: 050
+                  </span>
+                </div>
+                <div className="grid grid-cols-5 sm:grid-cols-10 md:grid-cols-10 lg:grid-cols-25 gap-2">
+                  {Array.from({ length: 50 }).map((_, i) => {
+                    const item = streamData?.sequence?.[i];
+                    return (
+                      <div
+                        key={i}
+                        className={`h-8 rounded flex items-center justify-center transition-all duration-700 border ${
+                          item
+                            ? "bg-emerald-500/20 border-emerald-500/40 text-emerald-400 scale-100"
+                            : "bg-black border-zinc-900 text-zinc-900 scale-90"
+                        }`}
+                      >
+                        <span className="text-[8px] font-black">
+                          {item ? (i + 1).toString().padStart(2, "0") : ".."}
+                        </span>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             </div>
