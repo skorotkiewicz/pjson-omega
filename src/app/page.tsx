@@ -105,60 +105,6 @@ export default function Home() {
     }
   };
 
-  const startReverseStream = async () => {
-    setIsStreaming(true);
-    setStreamData(null);
-    setOutput("");
-    setLogs(["[SYSTEM] INITIATING_REVERSE_UPLINK..."]);
-
-    vizSectionRef.current?.scrollIntoView({
-      behavior: "smooth",
-      block: "start",
-    });
-
-    const data = {
-      type: "UPLINK_PACKET",
-      origin: "CLIENT_TERMINAL",
-      nodes: Array.from({ length: 40 }, (_, i) => ({
-        id: i + 1,
-        status: "UPLOADED",
-        tags: ["REV", "LINK"],
-      })),
-      timestamp: new Date(),
-    };
-
-    const encoded = encode(data);
-    const chunks = 20;
-    const chunkSize = Math.ceil(encoded.length / chunks);
-
-    let currentBuffer = "";
-    for (let i = 0; i < encoded.length; i += chunkSize) {
-      if (!isStreaming) break; // Allow manual kill if needed
-      const chunk = encoded.slice(i, i + chunkSize);
-      currentBuffer += chunk;
-      setOutput(currentBuffer);
-      setActivePacket(chunk.length);
-      setLogs((prev) => [
-        ...prev.slice(-10),
-        `[UPLINK] SENT_${chunk.length}B_FRAGMENT`,
-      ]);
-
-      try {
-        const decoded = decode(currentBuffer) as PJSONStream;
-        if (decoded) {
-          setStreamData(decoded);
-          setInput(safeStringify(decoded));
-        }
-      } catch {}
-
-      await new Promise((r) => setTimeout(r, 200));
-    }
-
-    setLogs((prev) => [...prev, "[SYSTEM] UPLINK_SYNCHRONIZED_OK"]);
-    setIsStreaming(false);
-    setActivePacket(null);
-  };
-
   const onEncode = async () => {
     try {
       const res = await fetch("/api/pj", {
@@ -248,24 +194,14 @@ export default function Home() {
               {activePacket ? `${activePacket}B` : "00B"}
             </div>
           </div>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={startStream}
-              disabled={isStreaming}
-              className={`px-4 py-3 font-black text-[9px] uppercase tracking-widest transition-all ${isStreaming ? "bg-zinc-900 text-zinc-800" : "bg-emerald-800 text-white hover:bg-emerald-400"}`}
-            >
-              {isStreaming ? "Busy..." : "Downlink"}
-            </button>
-            <button
-              type="button"
-              onClick={startReverseStream}
-              disabled={isStreaming}
-              className={`px-4 py-3 font-black text-[9px] uppercase tracking-widest transition-all ${isStreaming ? "bg-zinc-900 text-zinc-800" : "bg-blue-800 text-white hover:bg-blue-400"}`}
-            >
-              {isStreaming ? "Busy..." : "Reverse_Link"}
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={startStream}
+            disabled={isStreaming}
+            className={`px-8 py-3 font-black text-[9px] uppercase tracking-widest transition-all ${isStreaming ? "bg-zinc-900 text-zinc-800" : "bg-emerald-500 text-black hover:bg-white"}`}
+          >
+            {isStreaming ? "Streaming..." : "Start_Stream"}
+          </button>
         </div>
       </header>
 
