@@ -37,6 +37,7 @@ Visit `localhost:3000` to access the **Overlink Matrix**:
 
 Verify the hydration mechanics via the CLI proof-of-concept scripts located in `/examples`:
 
+- `bun examples/simple.ts`: Loss-less round-trip verification and efficiency stats.
 - `bun examples/live_rehydration.ts`: Witness a JSON object growing character-by-character from a bit-stream.
 - `bun examples/server.ts`: A high-performance PJSON-native Bun server.
 - `bun examples/reverse_stream.ts`: Demonstrates client-to-server hydration resilience.

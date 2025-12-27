@@ -10,7 +10,7 @@ import { encode } from "../src/lib/pj";
 const PAYLOAD_SIZE = 50;
 
 const server = Bun.serve({
-  port: 3002,
+  port: 8888,
   async fetch(req) {
     if (req.method === "POST") {
       const reader = req.body?.getReader();

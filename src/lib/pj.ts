@@ -34,7 +34,7 @@ const numEnc = (v: number | bigint): string => {
     r = B[Number(abs % BigInt(91))] + r;
     abs = abs / BigInt(91);
   }
-  return `${neg ? "~" : "_"}${r}z`;
+  return `${neg ? "~" : "_"}${r} `;
 };
 
 export const encode = (v: unknown): string => {
@@ -115,10 +115,10 @@ export const decode = (s: string): unknown => {
     if (first !== "_" && first !== "~") return fIdx;
     const neg = first === "~";
     let r = BigInt(0);
-    while (p < s.length && s[p] !== "z") {
+    while (p < s.length && s[p] !== " ") {
       r = r * BigInt(91) + BigInt(B.indexOf(s[p++]));
     }
-    if (s[p] === "z") p++;
+    if (s[p] === " ") p++;
     return neg ? -r : r;
   };
 
