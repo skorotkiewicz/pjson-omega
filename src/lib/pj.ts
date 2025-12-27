@@ -1,54 +1,55 @@
-/* PJ Ultra - Maximum Density Machine Protocol */
+/* PJ OMEGA - Ultimate Machine Density */
 
 const B =
-  "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz!#$%&'()*+,-./:;<=>?@[\\]^_`{|}~";
+  "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz!#$%&'()*+,-./:;<=>?@[\\]^`{|}~ ";
+// 93 total. We use 0-59 as 1-byte numbers.
 const numEnc = (v: number): string => {
-  if (v === 0) return "0|";
+  if (v >= 0 && v < 60) return B[v];
   const neg = v < 0;
   let abs = Math.floor(Math.abs(v));
   let r = "";
   while (abs > 0) {
-    r = B[abs % 92] + r;
-    abs = Math.floor(abs / 92);
+    r = B[abs % 91] + r;
+    abs = Math.floor(abs / 91);
   }
-  return `${neg ? "~" : ""}${r}|`;
+  return `${neg ? "~" : "_"}${r}z`;
 };
 
 export const encode = (v: unknown): string => {
   const d = new Map<unknown, number>();
   let nId = 0;
   const e = (x: unknown): string => {
+    if (x === null || x === undefined) return "n";
     const t = typeof x;
     const r = d.get(x);
-    if (x === null || x === undefined) return "n";
     if (t === "boolean") return x ? "t" : "f";
     if (t === "number") {
       const num = x as number;
-      return Number.isInteger(num) ? `i${numEnc(num)}` : `l${num}|`;
+      return Number.isInteger(num) ? `i${numEnc(num)}` : `l${num}z`;
     }
     if (t === "string") {
       const s = x as string;
       if (r !== undefined) return `r${numEnc(r)}`;
-      if (s.length > 2 && nId < 2048) {
+      if (s.length > 2 && nId < 4096) {
         d.set(s, nId++);
         return `D${numEnc(s.length)}${s}`;
       }
       return `s${numEnc(s.length)}${s}`;
     }
     if (Array.isArray(x)) {
-      let out = `a${numEnc(x.length)}`;
+      let out = x.length < 10 ? B[60 + x.length] : `a${numEnc(x.length)}`;
       for (const item of x) out += e(item);
       return out;
     }
     if (t === "object") {
       const obj = x as Record<string, unknown>;
       const keys = Object.keys(obj);
-      let out = `o${numEnc(keys.length)}`;
+      let out =
+        keys.length < 10 ? B[70 + keys.length] : `o${numEnc(keys.length)}`;
       for (const k of keys) {
         const rK = d.get(k);
-        if (rK !== undefined) {
-          out += `k${numEnc(rK)}`;
-        } else {
+        if (rK !== undefined) out += `k${numEnc(rK)}`;
+        else {
           d.set(k, nId++);
           out += `m${numEnc(k.length)}${k}`;
         }
@@ -67,17 +68,14 @@ export const decode = (s: string): unknown => {
   let nId = 0;
 
   const readNum = (): number => {
-    if (p >= s.length) return 0;
-    const neg = s[p] === "~";
-    if (neg) p++;
+    const first = s[p++];
+    if (first !== "_" && first !== "~") return B.indexOf(first);
+    const neg = first === "~";
     let r = 0;
-    while (p < s.length && s[p] !== "|") {
-      const idx = B.indexOf(s[p]);
-      if (idx === -1) break;
-      r = r * 92 + idx;
-      p++;
+    while (p < s.length && s[p] !== "z") {
+      r = r * 91 + B.indexOf(s[p++]);
     }
-    p++; // skip |
+    p++; // skip z
     return neg ? -r : r;
   };
 
@@ -89,10 +87,10 @@ export const decode = (s: string): unknown => {
     if (t === "f") return false;
     if (t === "i") return readNum();
     if (t === "l") {
-      let x = "";
-      while (p < s.length && s[p] !== "|") x += s[p++];
+      let v = "";
+      while (p < s.length && s[p] !== "z") v += s[p++];
       p++;
-      return parseFloat(x);
+      return parseFloat(v);
     }
     if (t === "s" || t === "D") {
       const len = readNum();
@@ -102,18 +100,20 @@ export const decode = (s: string): unknown => {
       return r;
     }
     if (t === "r") return d.get(readNum());
-    if (t === "a") {
-      const len = readNum();
+
+    // Short Container Optimization
+    const tIdx = B.indexOf(t);
+    if (t === "a" || (tIdx >= 60 && tIdx < 70)) {
+      const len = tIdx >= 60 && tIdx < 70 ? tIdx - 60 : readNum();
       const a: unknown[] = [];
       for (let i = 0; i < len; i++) {
-        if (p >= s.length) break;
-        const x = f();
-        if (x !== undefined) a.push(x);
+        const val = f();
+        if (val !== undefined) a.push(val);
       }
       return a;
     }
-    if (t === "o") {
-      const len = readNum();
+    if (t === "o" || (tIdx >= 70 && tIdx < 80)) {
+      const len = tIdx >= 70 && tIdx < 80 ? tIdx - 70 : readNum();
       const o: Record<string, unknown> = {};
       for (let i = 0; i < len; i++) {
         if (p >= s.length) break;
@@ -134,7 +134,6 @@ export const decode = (s: string): unknown => {
     }
     return undefined;
   };
-
   return f();
 };
 
