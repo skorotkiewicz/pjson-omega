@@ -1,13 +1,16 @@
 {
-  "name": "alife",
-  "version": "0.1.0",
+  "name": "pjson-omega",
+  "version": "1.0.0",
+  "description": "High-Density Machine-to-Machine Protocol with Structural Referencing and Progressive Hydration.",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "biome check",
-    "format": "biome format --write"
+    "format": "biome format --write",
+    "test": "bun test",
+    "test:watch": "bun test --watch"
   },
   "dependencies": {
     "next": "16.1.1",

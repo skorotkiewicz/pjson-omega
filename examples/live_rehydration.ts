@@ -30,7 +30,7 @@ for (let i = 0; i < fullPj.length; i += chunkSize) {
   buffer += chunk;
 
   // Decodes the partial buffer into a live JS Object
-  const liveObject = decode(buffer) as any;
+  const liveObject = decode(buffer) as unknown;
 
   // Clear console and print growth
   process.stdout.write("\x1Bc"); // Clear screen
