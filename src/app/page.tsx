@@ -1,33 +1,77 @@
-import { ApiCounter } from "./components/ApiCounter";
+"use client";
+import { useState } from "react";
 
 export default function Home() {
+  const [input, setInput] = useState('{"hello":"world","count":42}');
+  const [output, setOutput] = useState("");
+  const [size, setSize] = useState({ json: 0, pj: 0 });
+
+  const encode = async () => {
+    const res = await fetch("/api/pj", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: input,
+    });
+    const pj = await res.text();
+    setOutput(pj);
+    setSize({ json: input.length, pj: pj.length });
+  };
+
+  const decode = async () => {
+    const res = await fetch("/api/pj", {
+      method: "POST",
+      headers: { "Content-Type": "text/plain" },
+      body: output,
+    });
+    const json = await res.json();
+    setInput(JSON.stringify(json));
+  };
+
   return (
-    <div className="min-h-screen bg-black">
-      <main className="mx-auto max-w-2xl py-16 px-8">
-        <h1 className="text-3xl font-bold text-white mb-2">ALIFE</h1>
-        <p className="text-zinc-400 mb-8">
-          PJ Protocol - Minimal Progressive JSON
-        </p>
+    <main className="min-h-screen bg-black text-white p-8 max-w-2xl mx-auto">
+      <h1 className="text-2xl font-bold mb-2">PJ Protocol</h1>
+      <p className="text-zinc-500 mb-6">Compact JSON communication</p>
 
-        <ApiCounter />
-
-        <div className="mt-12 p-6 bg-zinc-900 rounded-xl border border-zinc-800">
-          <h2 className="text-lg font-semibold text-white mb-4">API Usage</h2>
-          <code className="block text-sm text-green-400 bg-black p-4 rounded-lg overflow-x-auto">
-            <pre>{`POST /api/pj
-Content-Type: application/json
-
-{ "encode": { "hello": "world" } }
-→ Returns PJ string
-
-{ "decode": "pjstring" }
-→ Returns JSON
-
-{ "compare": { "data": "..." } }
-→ Returns { json, pj, saved }`}</pre>
-          </code>
+      <div className="space-y-4">
+        <div>
+          <label className="text-sm text-zinc-400">JSON</label>
+          <textarea
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            className="w-full bg-zinc-900 border border-zinc-800 rounded p-3 font-mono text-sm h-24"
+          />
         </div>
-      </main>
-    </div>
+
+        <div className="flex gap-2">
+          <button
+            onClick={encode}
+            className="bg-blue-600 px-4 py-2 rounded font-medium"
+          >
+            Encode →
+          </button>
+          <button
+            onClick={decode}
+            className="bg-zinc-700 px-4 py-2 rounded font-medium"
+          >
+            ← Decode
+          </button>
+          {size.json > 0 && (
+            <span className="text-zinc-500 text-sm self-center ml-auto">
+              {size.json}→{size.pj} bytes (
+              {Math.round((1 - size.pj / size.json) * 100)}% smaller)
+            </span>
+          )}
+        </div>
+
+        <div>
+          <label className="text-sm text-zinc-400">PJ Output</label>
+          <textarea
+            value={output}
+            onChange={(e) => setOutput(e.target.value)}
+            className="w-full bg-zinc-900 border border-zinc-800 rounded p-3 font-mono text-sm h-24 text-green-400"
+          />
+        </div>
+      </div>
+    </main>
   );
 }
