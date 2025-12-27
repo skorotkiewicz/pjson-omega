@@ -100,6 +100,10 @@ export default function Home() {
           if (decoded) {
             setStreamData(decoded);
             setInput(safeStringify(decoded));
+            setLogs((prev) => [
+              ...prev.slice(-10),
+              `[REHYDRATE] SYNC_OK_${buffer.length}B_BUFFER`,
+            ]);
           }
         } catch {}
       }
@@ -384,10 +388,16 @@ export default function Home() {
                   Telemetry
                 </span>
                 <div className="space-y-1">
+                  {isStreaming && (
+                    <div className="text-[9px] font-black text-blue-500 animate-pulse mb-2 border-b border-blue-900/30 pb-1">
+                      HYDRATION_LINK_ACTIVE: {streamData?.sequence?.length || 0}{" "}
+                      ITEMS
+                    </div>
+                  )}
                   {logs.map((log, i) => (
                     <div
                       key={i}
-                      className="text-[9px] font-mono text-emerald-500/30 border-l border-zinc-900/50 pl-2 leading-tight"
+                      className={`text-[9px] font-mono border-l pl-2 leading-tight ${log.includes("REHYDRATE") ? "text-blue-400 border-blue-900/50" : "text-emerald-500/30 border-zinc-900/50"}`}
                     >
                       {log}
                     </div>
