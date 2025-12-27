@@ -87,7 +87,10 @@ export default function Home() {
 
         try {
           const decoded = decode(buffer) as PJSONStream;
-          if (decoded) setStreamData(decoded);
+          if (decoded) {
+            setStreamData(decoded);
+            setInput(safeStringify(decoded));
+          }
         } catch {}
       }
       setLogs((prev) => [
@@ -142,7 +145,10 @@ export default function Home() {
 
       try {
         const decoded = decode(currentBuffer) as PJSONStream;
-        if (decoded) setStreamData(decoded);
+        if (decoded) {
+          setStreamData(decoded);
+          setInput(safeStringify(decoded));
+        }
       } catch {}
 
       await new Promise((r) => setTimeout(r, 200));
@@ -292,7 +298,14 @@ export default function Home() {
           <div className="flex-1 flex flex-col min-h-0 bg-black/40">
             <div className="flex-1 relative group border-b border-zinc-900/30">
               <span className="absolute top-4 left-8 text-[9px] text-zinc-800 uppercase pointer-events-none font-black tracking-widest transition-colors group-focus-within:text-zinc-600">
-                Machine_Input_JSON
+                {isStreaming ? (
+                  <span className="flex items-center gap-2 text-emerald-500">
+                    <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
+                    Live_JSON_Reconstruction
+                  </span>
+                ) : (
+                  "Machine_Input_JSON"
+                )}
               </span>
               <textarea
                 value={input}
