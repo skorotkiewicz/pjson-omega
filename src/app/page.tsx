@@ -10,11 +10,13 @@ export default function Home() {
   const [size, setSize] = useState({ json: 0, pj: 0 });
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamData, setStreamData] = useState<unknown>(null);
+  const [logs, setLogs] = useState<string[]>([]);
 
   const startStream = async () => {
     setIsStreaming(true);
     setStreamData(null);
     setOutput("");
+    setLogs(["[0ms] INITIATING_CONNECTION..."]);
 
     try {
       const response = await fetch("/api/pj/stream");
@@ -23,6 +25,7 @@ export default function Home() {
 
       let buffer = "";
       const textDecoder = new TextDecoder();
+      const startTime = Date.now();
 
       while (true) {
         const { done, value } = await reader.read();
@@ -30,17 +33,36 @@ export default function Home() {
 
         const chunk = textDecoder.decode(value, { stream: true });
         buffer += chunk;
-        setOutput(buffer); // Show raw stream progress
+        const elapsed = Date.now() - startTime;
+
+        setOutput(buffer);
+        setLogs((prev) => [
+          ...prev.slice(-4),
+          `[${elapsed}ms] RECV_${chunk.length}B_PACKET`,
+        ]);
 
         try {
           const decoded = decode(buffer);
-          if (decoded) setStreamData(decoded);
+          if (decoded) {
+            setStreamData(decoded);
+            const data = decoded as any;
+            if (data?.sequence) {
+              setLogs((prev) => [
+                ...prev.slice(-4),
+                `[${elapsed}ms] HYDRATED: ${data.sequence.length}/50 items`,
+              ]);
+            }
+          }
         } catch {
-          // Partial data might fail decoding markers at boundaries, just wait for more
+          // Ignore partial boundaries
         }
       }
-    } catch (err) {
-      console.error("Streaming error:", err);
+      setLogs((prev) => [
+        ...prev.slice(-4),
+        `[${Date.now() - startTime}ms] STREAM_COMPLETE`,
+      ]);
+    } catch {
+      setLogs((prev) => [...prev.slice(-4), `[ERROR] STREAM_INTERRUPTED`]);
     } finally {
       setIsStreaming(false);
     }
@@ -163,16 +185,18 @@ export default function Home() {
         <button
           type="button"
           onClick={onEncode}
-          className="group relative bg-blue-600 hover:bg-blue-500 px-8 py-3 rounded-xl font-bold text-sm transition-all shadow-lg hover:shadow-blue-500/20 flex items-center gap-2 overflow-hidden"
+          className="group relative bg-blue-600 hover:bg-blue-500 px-8 py-3 rounded-xl font-bold text-sm transition-all shadow-lg hover:shadow-blue-500/20 flex items-center gap-2"
         >
-          <span className="relative z-10 font-black tracking-widest">PACK</span>
+          <span className="relative z-10 font-black tracking-widest uppercase">
+            Pack
+          </span>
         </button>
         <button
           type="button"
           onClick={onDecode}
-          className="bg-zinc-800 hover:bg-zinc-700 px-8 py-3 rounded-xl font-bold text-sm transition-all border border-zinc-700/50 tracking-widest uppercase flex items-center gap-2"
+          className="bg-zinc-800 hover:bg-zinc-700 px-8 py-3 rounded-xl font-bold text-sm transition-all border border-zinc-700/50 tracking-widest uppercase"
         >
-          UNPACK
+          Unpack
         </button>
       </div>
 
@@ -187,7 +211,17 @@ export default function Home() {
             </div>
 
             <div className="bg-black/50 rounded-2xl border border-zinc-800/50 p-6 h-96 overflow-auto scrollbar-hide relative group">
-              <pre className="text-indigo-300 font-mono text-xs leading-relaxed">
+              <div className="mb-4 space-y-1">
+                {logs.map((log, i) => (
+                  <div
+                    key={i}
+                    className="text-[10px] font-mono text-emerald-500/60 animate-in fade-in slide-in-from-left-2"
+                  >
+                    {log}
+                  </div>
+                ))}
+              </div>
+              <pre className="text-indigo-300 font-mono text-xs leading-relaxed border-t border-zinc-900 pt-4">
                 {streamData ? (
                   JSON.stringify(streamData, null, 2)
                 ) : (
