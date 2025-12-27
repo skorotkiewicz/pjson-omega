@@ -1,3 +1,4 @@
+/** biome-ignore-all lint/suspicious/noExplicitAny: <> */
 import { describe, expect, test } from "bun:test";
 import { compare, decode, encode } from "./pj";
 
