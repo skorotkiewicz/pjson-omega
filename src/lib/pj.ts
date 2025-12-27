@@ -1,101 +1,110 @@
-/* PJ - Minimalist Progressive JSON Protocol */
+/* PJSON - Minimal, Progressive & Powerful */
+const B = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+const w = (n: number) =>
+  n >= 0 && n < 62
+    ? B[n]
+    : (n < 0 ? "-" : "_") + Math.abs(n).toString(36) + ";";
 
-export const encode = (v: any): string => {
+export const encode = (v: any) => {
   let d = new Map(),
     i = 0,
-    o = "",
-    e = (x: any) => {
-      if (x == null) o += "n";
-      else if (x === true) o += "t";
-      else if (x === false) o += "f";
-      else if (typeof x == "number") o += (x % 1 ? "l" : "i") + x + "|";
-      else if (typeof x == "string") {
-        const r = d.get(x);
-        if (r != null) o += "r" + r + "|";
-        else if (x.length > 2 && i < 128) {
-          d.set(x, i);
-          o += "d" + i++ + "|" + x.length + "|" + x;
-        } else o += "s" + x.length + "|" + x;
-      } else if (Array.isArray(x)) {
-        o += "a";
-        x.forEach(e);
-        o += "c";
-      } else {
-        o += "o";
-        Object.entries(x).forEach(([k, val]) => {
-          const r = d.get(k);
-          if (r != null) o += "k" + r + "|";
-          else {
-            d.set(k, i);
-            o += "m" + i++ + "|" + k.length + "|" + k;
-          }
-          e(val);
-        });
-        o += "c";
+    e = (x: any): string => {
+      const t = typeof x,
+        r = d.get(x);
+      if (x == null) return "n";
+      if (t == "boolean") return x ? "t" : "f";
+      if (t == "number")
+        return Number.isInteger(x) ? "i" + w(x) : "l" + x + ";";
+      if (t == "string")
+        return r != null
+          ? "r" + w(r)
+          : x.length > 2 && i < 2048
+            ? (d.set(x, i++), "D" + w(x.length) + x)
+            : "s" + w(x.length) + x;
+      if (Array.isArray(x)) return "a" + x.map(e).join("") + "c";
+      let o = "o";
+      for (const k in x) {
+        const r = d.get(k);
+        o +=
+          (r != null ? "k" + w(r) : (d.set(k, i++), "m" + w(k.length) + k)) +
+          e(x[k]);
       }
+      return o + "c";
     };
-  e(v);
-  return o;
+  return e(v);
 };
 
-export const decode = (s: string): any => {
+export const decode = (s: string) => {
   let d = new Map<number, string>(),
     p = 0,
-    n = () => {
-      let v = "";
-      while (p < s.length && s[p] != "|") v += s[p++];
-      p++;
-      return v;
+    j = 0,
+    g = () => {
+      const c = s[p++],
+        neg = c == "-";
+      if (c == "-" || c == "_") {
+        let v = "";
+        while (p < s.length && s[p] != ";") v += s[p++];
+        return p++, parseInt(v, 36) * (neg ? -1 : 1);
+      }
+      return B.indexOf(c);
     },
-    v = (): any => {
-      const t = s[p++];
+    f = (): any => {
+      if (p >= s.length) return;
+      let t = s[p++],
+        l,
+        v,
+        k,
+        o: any = {},
+        a = [];
       if (t == "n") return null;
       if (t == "t") return true;
       if (t == "f") return false;
-      if (t == "i" || t == "l") return +n();
-      if (t == "s") {
-        const l = +n();
-        const r = s.slice(p, p + l);
-        p += l;
-        return r;
+      if (t == "i") return g();
+      if (t == "l") {
+        let x = "";
+        while (p < s.length && s[p] != ";") x += s[p++];
+        p++;
+        return parseFloat(x);
       }
-      if (t == "d") {
-        const i = +n(),
-          l = +n(),
-          x = s.slice(p, p + l);
-        p += l;
-        d.set(i, x);
+      if (t == "s") {
+        l = g();
+        return s.slice(p, (p += l));
+      }
+      if (t == "D") {
+        l = g();
+        const x = s.slice(p, (p += l));
+        d.set(j++, x);
         return x;
       }
-      if (t == "r") return d.get(+n());
+      if (t == "r") return d.get(g());
       if (t == "a") {
-        const a: any[] = [];
-        while (s[p] != "c") a.push(v());
+        while (p < s.length && s[p] != "c") {
+          const x = f();
+          if (x !== undefined) a.push(x);
+        }
         p++;
         return a;
       }
       if (t == "o") {
-        const o: any = {};
-        while (s[p] != "c") {
-          const t = s[p++],
-            k =
-              t == "m"
+        while (p < s.length && s[p] != "c") {
+          const m = s[p++],
+            key =
+              m == "m"
                 ? (() => {
-                    const i = +n(),
-                      l = +n(),
-                      x = s.slice(p, p + l);
-                    p += l;
-                    d.set(i, x);
+                    const l = g();
+                    const x = s.slice(p, (p += l));
+                    d.set(j++, x);
                     return x;
                   })()
-                : d.get(+n());
-          o[k!] = v();
+                : d.get(g());
+          const val = f();
+          if (key !== undefined) o[key] = val;
         }
         p++;
         return o;
       }
     };
-  return v();
+  return f();
 };
 
 export const compare = (v: any) => {
