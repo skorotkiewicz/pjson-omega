@@ -27,10 +27,10 @@ const B =
 const numEnc = (v: number | bigint): string => {
   if (typeof v === "number" && v >= 0 && v <= 50) return B[v];
   const neg = v < 0;
-  let abs = v < 0n ? -BigInt(v) : BigInt(v);
+  let abs = v < BigInt(0) ? -BigInt(v) : BigInt(v);
   let r = "";
-  if (abs === 0n) return B[0];
-  while (abs > 0n) {
+  if (abs === BigInt(0)) return B[0];
+  while (abs > BigInt(0)) {
     r = B[Number(abs % BigInt(91))] + r;
     abs = abs / BigInt(91);
   }
@@ -109,14 +109,14 @@ export const decode = (s: string): unknown => {
   let nId = 0;
 
   const readBig = (): bigint => {
-    if (p >= s.length) return 0n;
+    if (p >= s.length) return BigInt(0);
     const first = s[p++];
     const fIdx = BigInt(B.indexOf(first));
     if (first !== "_" && first !== "~") return fIdx;
     const neg = first === "~";
-    let r = 0n;
+    let r = BigInt(0);
     while (p < s.length && s[p] !== "z") {
-      r = r * 91n + BigInt(B.indexOf(s[p++]));
+      r = r * BigInt(91) + BigInt(B.indexOf(s[p++]));
     }
     if (s[p] === "z") p++;
     return neg ? -r : r;

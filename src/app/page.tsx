@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { decode, encode } from "@/lib/pj";
+import { decode } from "@/lib/pj";
 
 interface PJSONItem {
   id: number;
@@ -38,16 +38,26 @@ export default function Home() {
   const hydrationRef = useRef<HTMLPreElement>(null);
   const vizSectionRef = useRef<HTMLDivElement>(null);
 
+  // Sync Scroll for Telemetry
   useEffect(() => {
-    if (scrollRef.current)
+    if (scrollRef.current) {
+      void logs.length; // Satisfy Biome trigger
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    if (bufferRef.current && isStreaming)
+    }
+  }, [logs.length]);
+
+  // Sync Scroll for Buffer and Hydrator
+  useEffect(() => {
+    if (!isStreaming) return;
+    if (bufferRef.current) {
+      void output.length; // Satisfy Biome trigger
       bufferRef.current.scrollTop = bufferRef.current.scrollHeight;
-    if (hydrationRef.current?.parentElement && isStreaming) {
+    }
+    if (hydrationRef.current?.parentElement) {
       hydrationRef.current.parentElement.scrollTop =
         hydrationRef.current.parentElement.scrollHeight;
     }
-  }, [logs, isStreaming, output]);
+  }, [isStreaming, output.length]);
 
   const startStream = async () => {
     setIsStreaming(true);
@@ -137,11 +147,11 @@ export default function Home() {
     }
   };
 
-  const safeStringify = (obj: any) => {
+  const safeStringify = (obj: unknown) => {
     const cache = new Set();
     return JSON.stringify(
       obj,
-      (key, value) => {
+      (_key, value) => {
         if (typeof value === "object" && value !== null) {
           if (cache.has(value)) return "[Circular Reference]";
           cache.add(value);

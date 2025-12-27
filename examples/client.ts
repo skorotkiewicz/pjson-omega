@@ -15,9 +15,7 @@ const fetchPJSON = async () => {
     console.log("[CLIENT] Decoded Data:");
     console.log(JSON.stringify(decoded, null, 2));
   } catch (error) {
-    console.error(
-      "[CLIENT] Connection Error. Is the server running? (bun examples/server.ts)",
-    );
+    console.error(`[CLIENT] Connection Error: ${error}`);
   }
 };
 
