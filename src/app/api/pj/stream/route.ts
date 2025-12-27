@@ -25,12 +25,13 @@ export async function GET() {
   const stream = new ReadableStream({
     async start(controller) {
       // Chunk the PJ string into small pieces to simulate network latency
-      const chunkSize = Math.ceil(fullPj.length / 20);
+      // Smaller chunks for a more progressive effect
+      const chunkSize = Math.ceil(fullPj.length / 50);
       for (let i = 0; i < fullPj.length; i += chunkSize) {
         const chunk = fullPj.slice(i, i + chunkSize);
         controller.enqueue(encoder.encode(chunk));
-        // Artificial delay to see the "live" effect
-        await new Promise((r) => setTimeout(r, 100));
+        // Increased delay to make the stream slower
+        await new Promise((r) => setTimeout(r, 500));
       }
       controller.close();
     },

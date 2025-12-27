@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { decode, encode } from "@/lib/pj";
+import { decode } from "@/lib/pj";
 
 export default function Home() {
   const [input, setInput] = useState(
@@ -9,7 +9,7 @@ export default function Home() {
   const [output, setOutput] = useState("");
   const [size, setSize] = useState({ json: 0, pj: 0 });
   const [isStreaming, setIsStreaming] = useState(false);
-  const [streamData, setStreamData] = useState<any>(null);
+  const [streamData, setStreamData] = useState<unknown>(null);
 
   const startStream = async () => {
     setIsStreaming(true);
@@ -35,7 +35,7 @@ export default function Home() {
         try {
           const decoded = decode(buffer);
           if (decoded) setStreamData(decoded);
-        } catch (e) {
+        } catch {
           // Partial data might fail decoding markers at boundaries, just wait for more
         }
       }
@@ -64,8 +64,7 @@ export default function Home() {
       } else {
         setSize({ json: input.length, pj: pj.length });
       }
-    } catch (e) {
-      console.error(e);
+    } catch {
       alert("Encoding Failed");
     }
   };
@@ -80,8 +79,7 @@ export default function Home() {
       if (!res.ok) throw new Error("Server rejected PJ");
       const json = await res.json();
       setInput(JSON.stringify(json, null, 2));
-    } catch (e) {
-      console.error(e);
+    } catch {
       alert("Decoding Failed");
     }
   };
@@ -133,9 +131,6 @@ export default function Home() {
               onChange={(e) => setInput(e.target.value)}
               className="w-full bg-zinc-950 border border-zinc-800 rounded-2xl p-5 font-mono text-sm h-64 focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/20 focus:outline-none transition-all resize-none shadow-inner"
             />
-            <div className="absolute top-4 right-4 text-[10px] font-mono text-zinc-700 pointer-events-none">
-              EDITABLE_BUFFER
-            </div>
           </div>
         </div>
 
@@ -159,9 +154,6 @@ export default function Home() {
                   -{Math.round((1 - size.pj / size.json) * 100)}%
                 </span>
               )}
-              <span className="text-[10px] font-mono text-emerald-900/50">
-                RAW_MACHINE_DATA
-              </span>
             </div>
           </div>
         </div>
@@ -174,20 +166,17 @@ export default function Home() {
           className="group relative bg-blue-600 hover:bg-blue-500 px-8 py-3 rounded-xl font-bold text-sm transition-all shadow-lg hover:shadow-blue-500/20 flex items-center gap-2 overflow-hidden"
         >
           <span className="relative z-10 font-black tracking-widest">PACK</span>
-          <span className="text-blue-200/50 text-xs">→</span>
-          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
         </button>
         <button
           type="button"
           onClick={onDecode}
           className="bg-zinc-800 hover:bg-zinc-700 px-8 py-3 rounded-xl font-bold text-sm transition-all border border-zinc-700/50 tracking-widest uppercase flex items-center gap-2"
         >
-          <span className="text-zinc-500">←</span>
           UNPACK
         </button>
       </div>
 
-      {(size.json > 0 || isStreaming || streamData) && (
+      {(size.json > 0 || isStreaming || !!streamData) && (
         <section className="animate-in fade-in slide-in-from-bottom-4 duration-500">
           <div className="bg-zinc-900/40 p-6 rounded-3xl border border-zinc-800/80 backdrop-blur-sm space-y-4">
             <div className="flex items-center justify-between border-b border-zinc-800 pb-4">
@@ -195,24 +184,6 @@ export default function Home() {
                 <span className="w-1.5 h-1.5 bg-blue-500 rounded-full" />
                 Live RE-HYDRATION
               </span>
-              <div className="flex gap-4 font-mono text-[10px]">
-                {size.json > 0 && (
-                  <>
-                    <div className="flex gap-1.5">
-                      <span className="text-zinc-600 uppercase">Input:</span>
-                      <span className="text-white">{size.json}B</span>
-                    </div>
-                    <div className="flex gap-1.5">
-                      <span className="text-zinc-600 uppercase">
-                        Compressed:
-                      </span>
-                      <span className="text-emerald-400 font-bold">
-                        {size.pj}B
-                      </span>
-                    </div>
-                  </>
-                )}
-              </div>
             </div>
 
             <div className="bg-black/50 rounded-2xl border border-zinc-800/50 p-6 h-96 overflow-auto scrollbar-hide relative group">
@@ -225,9 +196,6 @@ export default function Home() {
                   </span>
                 )}
               </pre>
-              <div className="absolute bottom-4 right-4 text-[9px] font-bold text-zinc-800 pointer-events-none group-hover:text-zinc-600 transition-colors">
-                REAL_TIME_DECODING_ACTIVE
-              </div>
             </div>
           </div>
         </section>
