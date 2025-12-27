@@ -32,14 +32,34 @@ export default function Home() {
   const [logs, setLogs] = useState<string[]>([]);
   const [activePacket, setActivePacket] = useState<number | null>(null);
 
-  // Ref for manual scroll checks or stickiness if ever opted back in
+  // Machine Control Refs
   const scrollRef = useRef<HTMLDivElement>(null);
+  const bufferRef = useRef<HTMLTextAreaElement>(null);
+  const hydrationRef = useRef<HTMLPreElement>(null);
+  const vizSectionRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (scrollRef.current)
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    if (bufferRef.current && isStreaming)
+      bufferRef.current.scrollTop = bufferRef.current.scrollHeight;
+    if (hydrationRef.current?.parentElement && isStreaming) {
+      hydrationRef.current.parentElement.scrollTop =
+        hydrationRef.current.parentElement.scrollHeight;
+    }
+  }, [logs, isStreaming, output]);
 
   const startStream = async () => {
     setIsStreaming(true);
     setStreamData(null);
     setOutput("");
     setLogs(["[SYSTEM] INITIATING_OMEGA_OVERLINK..."]);
+
+    // Smooth scroll to the live view if needed
+    vizSectionRef.current?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
 
     try {
       const response = await fetch("/api/pj/stream");
@@ -124,7 +144,7 @@ export default function Home() {
           </div>
           <div>
             <h1 className="text-2xl font-black tracking-tighter text-white italic leading-none">
-              PJSON_SUPREME
+              PJSON_OMEGA
             </h1>
             <div className="flex items-center gap-2 mt-1">
               <span
@@ -169,67 +189,69 @@ export default function Home() {
 
       {/* WORKSPACE - FILL REMAINING TALL */}
       <div className="flex-1 flex min-h-0 bg-black/50">
-        {/* LEFT: PACKER (40%) */}
-        <div className="w-[40%] flex flex-col border-r border-zinc-900/50">
-          <div className="flex justify-between items-center px-6 py-3 bg-[#0a0a0a] border-b border-zinc-900/30">
-            <span className="text-[8px] font-black text-zinc-600 uppercase tracking-widest italic">
-              Machine_Encoder
+        {/* LEFT: PACKER (55%) */}
+        <div className="w-[55%] flex flex-col border-r border-zinc-900/50">
+          <div className="flex justify-between items-center px-8 py-5 bg-[#0a0a0a] border-b border-zinc-900/40">
+            <span className="text-[10px] font-black text-emerald-500/50 uppercase tracking-[0.5em]">
+              Encoder_Decoding_Buffer_Array
             </span>
-            <div className="flex gap-4">
+            <div className="flex gap-6">
               <button
                 type="button"
                 onClick={onEncode}
-                className="text-[8px] font-bold text-zinc-700 hover:text-white uppercase"
+                className="text-[10px] font-bold text-zinc-600 hover:text-white uppercase tracking-widest transition-colors"
               >
                 Pack
               </button>
               <button
                 type="button"
                 onClick={onDecode}
-                className="text-[8px] font-bold text-zinc-700 hover:text-white uppercase"
+                className="text-[10px] font-bold text-zinc-600 hover:text-white uppercase tracking-widest transition-colors"
               >
                 Unpack
               </button>
             </div>
           </div>
 
-          <div className="flex-1 flex flex-col min-h-0">
+          <div className="flex-1 flex flex-col min-h-0 bg-black/40">
             <div className="flex-1 relative group border-b border-zinc-900/30">
-              <span className="absolute top-3 left-6 text-[7px] text-zinc-800 uppercase pointer-events-none">
-                Input_JSON
+              <span className="absolute top-4 left-8 text-[9px] text-zinc-800 uppercase pointer-events-none font-black tracking-widest transition-colors group-focus-within:text-zinc-600">
+                Machine_Input_JSON
               </span>
               <textarea
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                className="w-full h-full bg-transparent p-6 pt-10 focus:outline-none text-xs text-zinc-500 font-mono resize-none overflow-y-auto"
+                className="w-full h-full bg-transparent p-10 pt-16 focus:outline-none text-[13px] leading-relaxed text-zinc-400 font-mono resize-none overflow-y-auto selection:bg-white/10"
               />
             </div>
-            <div className="flex-1 relative group">
-              <span className="absolute top-3 left-6 text-[7px] text-zinc-800 uppercase pointer-events-none font-bold">
-                PJSON_Buffer
+            <div className="flex-1 relative group bg-emerald-950/5">
+              <span className="absolute top-4 left-8 text-[9px] text-emerald-950 uppercase pointer-events-none font-black tracking-widest transition-colors group-focus-within:text-emerald-900">
+                PJSON_Buffer_Raw
               </span>
               <textarea
-                readOnly
+                ref={bufferRef}
                 value={output}
-                className="w-full h-full bg-transparent p-6 pt-10 focus:outline-none text-[10px] text-emerald-500/60 font-mono resize-none break-all overflow-y-auto"
+                onChange={(e) => setOutput(e.target.value)}
+                className="w-full h-full bg-transparent p-10 pt-16 focus:outline-none text-[12px] leading-relaxed text-emerald-500 font-mono resize-none break-all overflow-y-auto selection:bg-emerald-500/20"
+                placeholder="Paste PJSON here to Unpack..."
               />
             </div>
           </div>
 
-          <div className="p-4 bg-[#070707] flex gap-4">
+          <div className="p-6 bg-[#070707] flex gap-6">
             <button
               type="button"
               onClick={onEncode}
-              className="flex-1 py-3 bg-white text-black font-black text-[10px] uppercase tracking-widest hover:bg-emerald-400"
+              className="flex-1 py-5 bg-white text-black font-black text-sm uppercase tracking-[0.3em] hover:bg-emerald-400 active:scale-[0.98] transition-all shadow-xl"
             >
               Pack_Omega
             </button>
             <button
               type="button"
               onClick={onDecode}
-              className="flex-1 py-3 bg-zinc-900 text-white font-black text-[10px] uppercase tracking-widest hover:bg-zinc-800 border border-zinc-800"
+              className="flex-1 py-5 bg-zinc-900 text-white font-black text-sm uppercase tracking-[0.3em] hover:bg-zinc-800 border border-zinc-800 active:scale-[0.98] transition-all"
             >
-              Unpack_JSON
+              Unpack_Omega_JSON
             </button>
           </div>
         </div>
@@ -241,17 +263,23 @@ export default function Home() {
               Hydration_Oversight
             </span>
             <span className="text-[7px] text-zinc-800 font-mono tracking-tighter">
-              ENGINE: OMEGA_SUPREME_93
+              ENGINE: OMEGA_93
             </span>
           </div>
 
           <div className="flex-1 flex min-h-0">
             {/* MAIN JSON TREE */}
-            <div className="flex-1 bg-black p-8 overflow-auto group relative">
+            <div
+              ref={vizSectionRef}
+              className="flex-1 bg-black p-8 overflow-auto group relative min-h-0"
+            >
               <span className="absolute top-3 left-6 text-[7px] text-zinc-800 uppercase pointer-events-none">
                 Rehydration_Matrix
               </span>
-              <pre className="text-emerald-500/80 text-[11px] leading-snug mt-4">
+              <pre
+                ref={hydrationRef}
+                className="text-emerald-500/80 text-[11px] leading-snug mt-4"
+              >
                 {streamData ? (
                   JSON.stringify(streamData, null, 2)
                 ) : (
@@ -304,7 +332,7 @@ export default function Home() {
       {/* FOOTER - FIXED */}
       <footer className="flex-none px-8 py-3 bg-[#0a0a0a] border-t border-zinc-900/50 flex justify-between items-center text-[7px] text-zinc-600 tracking-[0.2em] uppercase">
         <div className="flex gap-8">
-          <span>Protocol: SUPREME_MASTER</span>
+          <span>Protocol: OMEGA_MASTER</span>
           <span>Density: 34%_REDUCTION</span>
           <span>Auth: AGENT_TERMINAL_2.4</span>
         </div>
