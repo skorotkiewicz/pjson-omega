@@ -1,4 +1,4 @@
-import { compare, decode, encode } from "../src/lib/pj";
+import { compare, decode, encode } from "../lib/pj";
 
 /**
  * PJSON OMEGA - SIMPLE LIBRARY EXAMPLE

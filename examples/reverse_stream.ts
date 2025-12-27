@@ -1,4 +1,4 @@
-import { encode } from "../src/lib/pj";
+import { encode } from "../lib/pj";
 
 /**
  * REVERSE STREAMING DEMO (CLIENT -> SERVER)
@@ -20,7 +20,7 @@ const server = Bun.serve({
 
       let buffer = "";
       const decoder = new TextDecoder();
-      const { decode } = await import("../src/lib/pj");
+      const { decode } = await import("../lib/pj");
 
       while (true) {
         const { done, value } = await reader.read();

@@ -20,20 +20,21 @@ PJSON OMEGA is an industrial-strength serialization format designed for high-thr
 
 ---
 
-### Ω_DASHBOARD
+### Ω_DASHBOARDS
 
-The repository includes a **Next.js Operational Terminal** to witness the protocol in real-time.
+The repository features two official demos demonstrating the protocol's power:
 
+#### [Next.js Dashboard](./nextjs)
+An industrial-grade operational terminal for high-density monitoring.
 ```bash
-# Start the machine
-bun install
-bun dev
+cd nextjs && bun install && bun dev
 ```
 
-Visit `localhost:3000` to access the **Overlink Matrix**:
-1. **Downlink**: Start a live PJSON stream from the server.
-2. **Rehydration_Matrix**: Watch the bit-stream physically turn into a React DOM in real-time.
-3. **Efficiency Monitor**: Track bandwidth savings (avg. 30-75% over raw JSON).
+#### [Vite Official Demo](./vite)
+A sleek, lightweight transmission proof of concept.
+```bash
+cd vite && bun install && bun dev
+```
 
 ---
 
@@ -50,9 +51,12 @@ Verify the hydration mechanics via the CLI proof-of-concept scripts located in `
 
 ### Ω_ARCHITECTURE
 
-- `src/lib/pj.ts`: The protocol engine.
-- `src/app/page.tsx`: The industrial dashboard.
-- `src/app/api/pj/stream`: The overlink source provider.
+PJSON OMEGA is designed for portability. The same core protocol powers all demos from a centralized location:
+
+- `lib/pj.ts`: The unified protocol engine.
+- `nextjs/`: The industrial Next.js operational dashboard.
+- `vite/`: The official Vite transmission demo.
+- `examples/`: Standalone CLI proof-of-concept scripts.
 
 ---
 

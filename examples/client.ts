@@ -1,4 +1,4 @@
-import { decode } from "../src/lib/pj";
+import { decode } from "../lib/pj";
 
 const fetchPJSON = async () => {
   console.log("[CLIENT] Requesting data from server...");

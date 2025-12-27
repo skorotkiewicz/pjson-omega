@@ -1,4 +1,4 @@
-import { decode, encode } from "../src/lib/pj";
+import { decode, encode } from "../lib/pj";
 
 /**
  * LIVE JSON REHYDRATION DEMO
