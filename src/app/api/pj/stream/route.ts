@@ -8,13 +8,14 @@ export async function GET() {
     timestamp: Date.now(),
     sequence: Array.from({ length: 50 }, (_, i) => ({
       id: i + 1,
-      value: Math.random().toString(36).slice(2, 7),
-      active: i % 2 === 0,
-      tags: ["stream", "live", "pjson"],
-      meta: {
-        latency: Math.floor(Math.random() * 100),
-        processed: true,
+      user: `Node_${(i + 1).toString().padStart(3, "0")}`,
+      status: ["ACTIVE", "STANDBY", "RECOVERING"][i % 3],
+      load: Math.floor(Math.random() * 100),
+      metrics: {
+        cpu: (Math.random() * 100).toFixed(1),
+        temp: (30 + Math.random() * 40).toFixed(1),
       },
+      tags: ["PROD", "NODE", "PJSON"].slice(0, (i % 3) + 1),
     })),
     footer: "Full transmission complete",
   };
