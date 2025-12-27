@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { decode } from "@/lib/pj";
+import { decode, encode } from "@/lib/pj";
 
 interface PJSONItem {
   id: number;
@@ -102,6 +102,57 @@ export default function Home() {
     }
   };
 
+  const startReverseStream = async () => {
+    setIsStreaming(true);
+    setStreamData(null);
+    setOutput("");
+    setLogs(["[SYSTEM] INITIATING_REVERSE_UPLINK..."]);
+
+    vizSectionRef.current?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+
+    const data = {
+      type: "UPLINK_PACKET",
+      origin: "CLIENT_TERMINAL",
+      nodes: Array.from({ length: 40 }, (_, i) => ({
+        id: i + 1,
+        status: "UPLOADED",
+        tags: ["REV", "LINK"],
+      })),
+      timestamp: new Date(),
+    };
+
+    const encoded = encode(data);
+    const chunks = 20;
+    const chunkSize = Math.ceil(encoded.length / chunks);
+
+    let currentBuffer = "";
+    for (let i = 0; i < encoded.length; i += chunkSize) {
+      if (!isStreaming) break; // Allow manual kill if needed
+      const chunk = encoded.slice(i, i + chunkSize);
+      currentBuffer += chunk;
+      setOutput(currentBuffer);
+      setActivePacket(chunk.length);
+      setLogs((prev) => [
+        ...prev.slice(-10),
+        `[UPLINK] SENT_${chunk.length}B_FRAGMENT`,
+      ]);
+
+      try {
+        const decoded = decode(currentBuffer) as PJSONStream;
+        if (decoded) setStreamData(decoded);
+      } catch {}
+
+      await new Promise((r) => setTimeout(r, 200));
+    }
+
+    setLogs((prev) => [...prev, "[SYSTEM] UPLINK_SYNCHRONIZED_OK"]);
+    setIsStreaming(false);
+    setActivePacket(null);
+  };
+
   const onEncode = async () => {
     try {
       const res = await fetch("/api/pj", {
@@ -191,14 +242,24 @@ export default function Home() {
               {activePacket ? `${activePacket}B` : "00B"}
             </div>
           </div>
-          <button
-            type="button"
-            onClick={startStream}
-            disabled={isStreaming}
-            className={`px-6 py-3 font-black text-[9px] uppercase tracking-widest transition-all ${isStreaming ? "bg-zinc-900 text-zinc-800" : "bg-emerald-500 text-black hover:bg-white"}`}
-          >
-            {isStreaming ? "Streaming..." : "Start_Overlink"}
-          </button>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={startStream}
+              disabled={isStreaming}
+              className={`px-4 py-3 font-black text-[9px] uppercase tracking-widest transition-all ${isStreaming ? "bg-zinc-900 text-zinc-800" : "bg-emerald-800 text-white hover:bg-emerald-400"}`}
+            >
+              {isStreaming ? "Busy..." : "Downlink"}
+            </button>
+            <button
+              type="button"
+              onClick={startReverseStream}
+              disabled={isStreaming}
+              className={`px-4 py-3 font-black text-[9px] uppercase tracking-widest transition-all ${isStreaming ? "bg-zinc-900 text-zinc-800" : "bg-blue-800 text-white hover:bg-blue-400"}`}
+            >
+              {isStreaming ? "Busy..." : "Reverse_Link"}
+            </button>
+          </div>
         </div>
       </header>
 
@@ -283,24 +344,75 @@ export default function Home() {
           </div>
 
           <div className="flex-1 flex min-h-0">
-            {/* MAIN JSON TREE */}
+            {/* MAIN HYDRATION VIEW - SPLIT PANELS */}
             <div
               ref={vizSectionRef}
-              className="flex-1 bg-black p-8 overflow-auto group relative min-h-0"
+              className="flex-1 grid grid-cols-2 min-h-0 bg-black"
             >
-              <span className="absolute top-3 left-6 text-[7px] text-zinc-800 uppercase pointer-events-none">
-                Rehydration_Matrix
-              </span>
-              <pre
-                ref={hydrationRef}
-                className="text-emerald-500/80 text-[11px] leading-snug mt-4"
-              >
-                {streamData ? (
-                  safeStringify(streamData)
-                ) : (
-                  <span className="text-zinc-900 italic">Waiting...</span>
-                )}
-              </pre>
+              {/* LEFT SUB-PANEL: RAW PROTOCOL HYDRATION */}
+              <div className="border-r border-zinc-900/50 p-8 overflow-auto group relative flex flex-col">
+                <span className="text-[7px] text-zinc-800 uppercase font-black tracking-widest mb-6 block">
+                  Rehydration_Matrix_Raw
+                </span>
+                <pre
+                  ref={hydrationRef}
+                  className="text-emerald-500/80 text-[10px] leading-tight font-mono whitespace-pre-wrap"
+                >
+                  {streamData ? (
+                    safeStringify(streamData)
+                  ) : (
+                    <span className="text-zinc-900 italic animate-pulse">
+                      Waiting for bytes...
+                    </span>
+                  )}
+                </pre>
+              </div>
+
+              {/* RIGHT SUB-PANEL: REACT COMPONENT SYNC */}
+              <div className="p-8 overflow-auto flex flex-col bg-zinc-950/20">
+                <span className="text-[7px] text-blue-900 uppercase font-black tracking-widest mb-6 block">
+                  React_Component_Sync_Active
+                </span>
+                <div className="grid grid-cols-1 gap-2">
+                  {streamData?.sequence?.map((item, i) => (
+                    <div
+                      key={i}
+                      className="bg-[#0a0a0a] border border-zinc-900 p-3 rounded-xs flex justify-between items-center group hover:border-emerald-500/50 transition-all animate-in fade-in slide-in-from-bottom-2 duration-500"
+                    >
+                      <div className="flex flex-col gap-1">
+                        <div className="text-[10px] font-black text-white italic">
+                          {String(item.user || `ENTITY_${i}`)}
+                        </div>
+                        <div className="flex gap-2">
+                          <span className="text-[7px] text-zinc-700 uppercase">
+                            {typeof item.status === "object"
+                              ? "[REF]"
+                              : String(item.status)}
+                          </span>
+                          <span className="text-[7px] text-emerald-500/50">
+                            L:
+                            {typeof item.load === "object"
+                              ? "?"
+                              : String(item.load)}
+                            %
+                          </span>
+                        </div>
+                      </div>
+                      <div className="text-[8px] text-zinc-800 font-mono group-hover:text-emerald-500 transition-colors">
+                        ID_{item.id}
+                      </div>
+                    </div>
+                  ))}
+                  {(!streamData?.sequence ||
+                    streamData.sequence.length === 0) && (
+                    <div className="h-full flex items-center justify-center border border-dashed border-zinc-900 rounded-sm">
+                      <span className="text-[8px] text-zinc-800 uppercase italic">
+                        Link_Pending...
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
 
             {/* SIDEBAR TELEMETRY */}
