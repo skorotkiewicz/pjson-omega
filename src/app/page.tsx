@@ -34,8 +34,11 @@ export default function Home() {
 
       <div className="space-y-4">
         <div>
-          <label className="text-sm text-zinc-400">JSON</label>
+          <label htmlFor="json-input" className="text-sm text-zinc-400">
+            JSON
+          </label>
           <textarea
+            id="json-input"
             value={input}
             onChange={(e) => setInput(e.target.value)}
             className="w-full bg-zinc-900 border border-zinc-800 rounded p-3 font-mono text-sm h-24"
@@ -44,12 +47,14 @@ export default function Home() {
 
         <div className="flex gap-2">
           <button
+            type="button"
             onClick={encode}
             className="bg-blue-600 px-4 py-2 rounded font-medium"
           >
             Encode →
           </button>
           <button
+            type="button"
             onClick={decode}
             className="bg-zinc-700 px-4 py-2 rounded font-medium"
           >
@@ -64,8 +69,11 @@ export default function Home() {
         </div>
 
         <div>
-          <label className="text-sm text-zinc-400">PJ Output</label>
+          <label htmlFor="pj-output" className="text-sm text-zinc-400">
+            PJ Output
+          </label>
           <textarea
+            id="pj-output"
             value={output}
             onChange={(e) => setOutput(e.target.value)}
             className="w-full bg-zinc-900 border border-zinc-800 rounded p-3 font-mono text-sm h-24 text-green-400"

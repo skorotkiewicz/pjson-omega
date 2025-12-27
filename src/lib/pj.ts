@@ -1,118 +1,148 @@
 /* PJSON - Minimal, Progressive & Powerful */
 const B = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 const w = (n: number) =>
-  n >= 0 && n < 62
-    ? B[n]
-    : (n < 0 ? "-" : "_") + Math.abs(n).toString(36) + ";";
+  n >= 0 && n < 62 ? B[n] : `${n < 0 ? "-" : "_"}${Math.abs(n).toString(36)};`;
 
-export const encode = (v: any) => {
-  let d = new Map(),
-    i = 0,
-    e = (x: any): string => {
-      const t = typeof x,
-        r = d.get(x);
-      if (x == null) return "n";
-      if (t == "boolean") return x ? "t" : "f";
-      if (t == "number")
-        return Number.isInteger(x) ? "i" + w(x) : "l" + x + ";";
-      if (t == "string")
-        return r != null
-          ? "r" + w(r)
-          : x.length > 2 && i < 2048
-            ? (d.set(x, i++), "D" + w(x.length) + x)
-            : "s" + w(x.length) + x;
-      if (Array.isArray(x)) return "a" + x.map(e).join("") + "c";
-      let o = "o";
-      for (const k in x) {
-        const r = d.get(k);
-        o +=
-          (r != null ? "k" + w(r) : (d.set(k, i++), "m" + w(k.length) + k)) +
-          e(x[k]);
+export const encode = (v: unknown): string => {
+  const d = new Map<unknown, number>();
+  let i = 0;
+  const e = (x: unknown): string => {
+    const t = typeof x;
+    const r = d.get(x);
+    if (x === null || x === undefined) return "n";
+    if (t === "boolean") return x ? "t" : "f";
+    if (t === "number") {
+      const num = x as number;
+      return Number.isInteger(num) ? `i${w(num)}` : `l${num};`;
+    }
+    if (t === "string") {
+      const s = x as string;
+      if (r !== undefined) return `r${w(r)}`;
+      if (s.length > 2 && i < 2048) {
+        d.set(s, i);
+        const out = `D${w(s.length)}${s}`;
+        i++;
+        return out;
       }
-      return o + "c";
-    };
+      return `s${w(s.length)}${s}`;
+    }
+    if (Array.isArray(x)) return `a${x.map(e).join("")}c`;
+    if (t === "object") {
+      const obj = x as Record<string, unknown>;
+      let o = "o";
+      for (const k in obj) {
+        if (Object.hasOwn(obj, k)) {
+          const rK = d.get(k);
+          if (rK !== undefined) {
+            o += `k${w(rK)}`;
+          } else {
+            d.set(k, i);
+            o += `m${w(k.length)}${k}`;
+            i++;
+          }
+          o += e(obj[k]);
+        }
+      }
+      return `${o}c`;
+    }
+    return "n";
+  };
   return e(v);
 };
 
-export const decode = (s: string) => {
-  let d = new Map<number, string>(),
-    p = 0,
-    j = 0,
-    g = () => {
-      const c = s[p++],
-        neg = c == "-";
-      if (c == "-" || c == "_") {
-        let v = "";
-        while (p < s.length && s[p] != ";") v += s[p++];
-        return p++, parseInt(v, 36) * (neg ? -1 : 1);
-      }
-      return B.indexOf(c);
-    },
-    f = (): any => {
-      if (p >= s.length) return;
-      let t = s[p++],
-        l,
-        v,
-        k,
-        o: any = {},
-        a = [];
-      if (t == "n") return null;
-      if (t == "t") return true;
-      if (t == "f") return false;
-      if (t == "i") return g();
-      if (t == "l") {
-        let x = "";
-        while (p < s.length && s[p] != ";") x += s[p++];
+export const decode = (s: string): unknown => {
+  const d = new Map<number, string>();
+  let p = 0;
+  let j = 0;
+  const g = (): number => {
+    const c = s[p];
+    p++;
+    const neg = c === "-";
+    if (c === "-" || c === "_") {
+      let valStr = "";
+      while (p < s.length && s[p] !== ";") {
+        valStr += s[p];
         p++;
-        return parseFloat(x);
       }
-      if (t == "s") {
-        l = g();
-        return s.slice(p, (p += l));
+      p++; // Skip semicolon
+      return parseInt(valStr, 36) * (neg ? -1 : 1);
+    }
+    return B.indexOf(c);
+  };
+  const f = (): unknown => {
+    if (p >= s.length) return undefined;
+    const t = s[p];
+    p++;
+    if (t === "n") return null;
+    if (t === "t") return true;
+    if (t === "f") return false;
+    if (t === "i") return g();
+    if (t === "l") {
+      let x = "";
+      while (p < s.length && s[p] !== ";") {
+        x += s[p];
+        p++;
       }
-      if (t == "D") {
-        l = g();
-        const x = s.slice(p, (p += l));
-        d.set(j++, x);
-        return x;
+      p++;
+      return parseFloat(x);
+    }
+    if (t === "s") {
+      const len = g();
+      const r = s.slice(p, p + len);
+      p += len;
+      return r;
+    }
+    if (t === "D") {
+      const len = g();
+      const r = s.slice(p, p + len);
+      p += len;
+      d.set(j, r);
+      j++;
+      return r;
+    }
+    if (t === "r") return d.get(g());
+    if (t === "a") {
+      const a: unknown[] = [];
+      while (p < s.length && s[p] !== "c") {
+        const x = f();
+        if (x !== undefined) a.push(x);
       }
-      if (t == "r") return d.get(g());
-      if (t == "a") {
-        while (p < s.length && s[p] != "c") {
-          const x = f();
-          if (x !== undefined) a.push(x);
+      p++;
+      return a;
+    }
+    if (t === "o") {
+      const o: Record<string, unknown> = {};
+      while (p < s.length && s[p] !== "c") {
+        const m = s[p];
+        p++;
+        let key: string | undefined;
+        if (m === "m") {
+          const len = g();
+          key = s.slice(p, p + len);
+          p += len;
+          d.set(j, key);
+          j++;
+        } else {
+          key = d.get(g());
         }
-        p++;
-        return a;
+        const val = f();
+        if (key !== undefined) o[key] = val;
       }
-      if (t == "o") {
-        while (p < s.length && s[p] != "c") {
-          const m = s[p++],
-            key =
-              m == "m"
-                ? (() => {
-                    const l = g();
-                    const x = s.slice(p, (p += l));
-                    d.set(j++, x);
-                    return x;
-                  })()
-                : d.get(g());
-          const val = f();
-          if (key !== undefined) o[key] = val;
-        }
-        p++;
-        return o;
-      }
-    };
+      p++;
+      return o;
+    }
+    return undefined;
+  };
   return f();
 };
 
-export const compare = (v: any) => {
-  const j = JSON.stringify(v).length,
-    p = encode(v).length;
+export const compare = (v: unknown) => {
+  const jsonStr = JSON.stringify(v);
+  const jLen = jsonStr ? jsonStr.length : 0;
+  const pLen = encode(v).length;
   return {
-    json: j,
-    pj: p,
-    saved: (j ? (100 - (p / j) * 100).toFixed(0) : 0) + "%",
+    json: jLen,
+    pj: pLen,
+    saved: `${jLen ? (100 - (pLen / jLen) * 100).toFixed(0) : "0"}%`,
   };
 };
