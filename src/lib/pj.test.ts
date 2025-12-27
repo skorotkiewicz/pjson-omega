@@ -166,5 +166,32 @@ describe("PJ Protocol", () => {
 
       expect(decode(encode(data))).toEqual(data);
     });
+
+    test("interrupted stream (70%)", () => {
+      const data = {
+        title: "Large Data Stream",
+        items: Array.from({ length: 20 }, (_, i) => ({
+          id: i,
+          uid: `user-${i}`,
+          active: i % 2 === 0,
+          meta: { hash: Math.random().toString(36) },
+        })),
+        footer: "End of transmission",
+      };
+
+      const full = encode(data);
+      const partial = full.slice(0, Math.floor(full.length * 0.7));
+      // biome-ignore lint/suspicious/noExplicitAny: <>
+      const decoded: any = decode(partial);
+
+      // Should return a valid object, even if partial
+      expect(typeof decoded).toBe("object");
+      expect(decoded.title).toBe("Large Data Stream");
+      expect(Array.isArray(decoded.items)).toBe(true);
+      // Items should be partially loaded
+      expect(decoded.items.length).toBeGreaterThan(0);
+      // The footer which arrives at 100% should be undefined
+      expect(decoded.footer).toBeUndefined();
+    });
   });
 });

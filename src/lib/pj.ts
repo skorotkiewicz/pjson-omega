@@ -1,11 +1,22 @@
-/* PJSON - Minimal, Progressive & Powerful */
-const B = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
-const w = (n: number) =>
-  n >= 0 && n < 62 ? B[n] : `${n < 0 ? "-" : "_"}${Math.abs(n).toString(36)};`;
+/* PJ Ultra - Maximum Density Machine Protocol */
+
+const B =
+  "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz!#$%&'()*+,-./:;<=>?@[\\]^_`{|}~";
+const numEnc = (v: number): string => {
+  if (v === 0) return "0|";
+  const neg = v < 0;
+  let abs = Math.floor(Math.abs(v));
+  let r = "";
+  while (abs > 0) {
+    r = B[abs % 92] + r;
+    abs = Math.floor(abs / 92);
+  }
+  return `${neg ? "~" : ""}${r}|`;
+};
 
 export const encode = (v: unknown): string => {
   const d = new Map<unknown, number>();
-  let i = 0;
+  let nId = 0;
   const e = (x: unknown): string => {
     const t = typeof x;
     const r = d.get(x);
@@ -13,37 +24,37 @@ export const encode = (v: unknown): string => {
     if (t === "boolean") return x ? "t" : "f";
     if (t === "number") {
       const num = x as number;
-      return Number.isInteger(num) ? `i${w(num)}` : `l${num};`;
+      return Number.isInteger(num) ? `i${numEnc(num)}` : `l${num}|`;
     }
     if (t === "string") {
       const s = x as string;
-      if (r !== undefined) return `r${w(r)}`;
-      if (s.length > 2 && i < 2048) {
-        d.set(s, i);
-        const out = `D${w(s.length)}${s}`;
-        i++;
-        return out;
+      if (r !== undefined) return `r${numEnc(r)}`;
+      if (s.length > 2 && nId < 2048) {
+        d.set(s, nId++);
+        return `D${numEnc(s.length)}${s}`;
       }
-      return `s${w(s.length)}${s}`;
+      return `s${numEnc(s.length)}${s}`;
     }
-    if (Array.isArray(x)) return `a${x.map(e).join("")}c`;
+    if (Array.isArray(x)) {
+      let out = `a${numEnc(x.length)}`;
+      for (const item of x) out += e(item);
+      return out;
+    }
     if (t === "object") {
       const obj = x as Record<string, unknown>;
-      let o = "o";
-      for (const k in obj) {
-        if (Object.hasOwn(obj, k)) {
-          const rK = d.get(k);
-          if (rK !== undefined) {
-            o += `k${w(rK)}`;
-          } else {
-            d.set(k, i);
-            o += `m${w(k.length)}${k}`;
-            i++;
-          }
-          o += e(obj[k]);
+      const keys = Object.keys(obj);
+      let out = `o${numEnc(keys.length)}`;
+      for (const k of keys) {
+        const rK = d.get(k);
+        if (rK !== undefined) {
+          out += `k${numEnc(rK)}`;
+        } else {
+          d.set(k, nId++);
+          out += `m${numEnc(k.length)}${k}`;
         }
+        out += e(obj[k]);
       }
-      return `${o}c`;
+      return out;
     }
     return "n";
   };
@@ -53,86 +64,77 @@ export const encode = (v: unknown): string => {
 export const decode = (s: string): unknown => {
   const d = new Map<number, string>();
   let p = 0;
-  let j = 0;
-  const g = (): number => {
-    const c = s[p];
-    p++;
-    const neg = c === "-";
-    if (c === "-" || c === "_") {
-      let valStr = "";
-      while (p < s.length && s[p] !== ";") {
-        valStr += s[p];
-        p++;
-      }
-      p++; // Skip semicolon
-      return parseInt(valStr, 36) * (neg ? -1 : 1);
+  let nId = 0;
+
+  const readNum = (): number => {
+    if (p >= s.length) return 0;
+    const neg = s[p] === "~";
+    if (neg) p++;
+    let r = 0;
+    while (p < s.length && s[p] !== "|") {
+      const idx = B.indexOf(s[p]);
+      if (idx === -1) break;
+      r = r * 92 + idx;
+      p++;
     }
-    return B.indexOf(c);
+    p++; // skip |
+    return neg ? -r : r;
   };
+
   const f = (): unknown => {
     if (p >= s.length) return undefined;
-    const t = s[p];
-    p++;
+    const t = s[p++];
     if (t === "n") return null;
     if (t === "t") return true;
     if (t === "f") return false;
-    if (t === "i") return g();
+    if (t === "i") return readNum();
     if (t === "l") {
       let x = "";
-      while (p < s.length && s[p] !== ";") {
-        x += s[p];
-        p++;
-      }
+      while (p < s.length && s[p] !== "|") x += s[p++];
       p++;
       return parseFloat(x);
     }
-    if (t === "s") {
-      const len = g();
+    if (t === "s" || t === "D") {
+      const len = readNum();
       const r = s.slice(p, p + len);
       p += len;
+      if (t === "D" && r.length === len) d.set(nId++, r);
       return r;
     }
-    if (t === "D") {
-      const len = g();
-      const r = s.slice(p, p + len);
-      p += len;
-      d.set(j, r);
-      j++;
-      return r;
-    }
-    if (t === "r") return d.get(g());
+    if (t === "r") return d.get(readNum());
     if (t === "a") {
+      const len = readNum();
       const a: unknown[] = [];
-      while (p < s.length && s[p] !== "c") {
+      for (let i = 0; i < len; i++) {
+        if (p >= s.length) break;
         const x = f();
         if (x !== undefined) a.push(x);
       }
-      p++;
       return a;
     }
     if (t === "o") {
+      const len = readNum();
       const o: Record<string, unknown> = {};
-      while (p < s.length && s[p] !== "c") {
-        const m = s[p];
-        p++;
+      for (let i = 0; i < len; i++) {
+        if (p >= s.length) break;
+        const mt = s[p++];
         let key: string | undefined;
-        if (m === "m") {
-          const len = g();
-          key = s.slice(p, p + len);
-          p += len;
-          d.set(j, key);
-          j++;
-        } else {
-          key = d.get(g());
+        if (mt === "m") {
+          const kl = readNum();
+          key = s.slice(p, p + kl);
+          p += kl;
+          if (key.length === kl) d.set(nId++, key);
+        } else if (mt === "k") {
+          key = d.get(readNum());
         }
         const val = f();
         if (key !== undefined) o[key] = val;
       }
-      p++;
       return o;
     }
     return undefined;
   };
+
   return f();
 };
 
