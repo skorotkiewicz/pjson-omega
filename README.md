@@ -1,7 +1,7 @@
 # <p align="center">PJSON Ω_OMEGA</p>
 
 <p align="center">
-  <img src="public/banner.png" alt="PJSON OMEGA Banner" width="100%">
+  <img src="vite/public/banner.png" alt="PJSON OMEGA Banner" width="100%">
 </p>
 
 > **High-Density Machine-to-Machine Protocol**  
